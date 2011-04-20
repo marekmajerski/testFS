@@ -11,7 +11,6 @@
 #na dysku (podanego przez usera)
 
 
-mkdir -p /media/test/marek/$3
 
 for (( i=0; $i < $1; ++i )) 
 do

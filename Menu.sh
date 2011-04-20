@@ -11,7 +11,10 @@
 function SetFile
 {
 	tmpFile=tmp_File
+	location=location_File
 	backup=backup_File
+	user=user_File
+	log=log_File
 }
 
 function Menu
@@ -20,14 +23,14 @@ function Menu
 	--backtitle "Tester ver. 1.0" \
 	--menu "Wybierz opcję" 15 60 4 \
 	1 "Uruchom skrypt testujący" \
-	2 "Pomoc" \
+	2 "Przygotuj folder do testow" \
 	3 "Usuwanie Folderu testowego"\
 	4 "Zakończ" 2>$tmpFile
 	selectOption=`cat tmp_File`
 
 	case $selectOption in
 	1) Generate ;;
-	2) Help ;;
+	2) MakeDir ;;
 	3) Delete ;;
 	3) Finish ;;
 	esac	
@@ -35,28 +38,40 @@ function Menu
 	clear	
 }
 
+function MakeDir
+{
+	setFile
+	#pobieranie ścieżki do montowania
+	dialog --title "Pobieranie danych od uzytkownika" \
+	--backtitle "Tester ver. 1.0" \
+	--inputbox "Podaj sciezke do zapisu testowych plikow:" 8 60 2>$location
+	
+	location=location_File
+	userPath=`cat user_File`
+	mkdir -p /home/$userPath/$location
+	
+	Menu
+}
+
 function Generate
 {
 	setFile
 
 	#pobieranie do zmiennej fileValue ilosci plików od użytkownika
-	dialog --title "Podaj ilosc plikow" \
+	dialog --title "Pobieranie danych od uzytkownika" \
 	--backtitle "Tester ver. 1.0" \
-	--inputbox "Pobieranie danych od uzytkownika" 8 60 2>$tmpFile
+	--inputbox "Podaj ilosc plikow:" 8 60 2>$tmpFile
 	fileValue=`cat tmp_File`
 	
 
 
 	#pobieranie rozmiaruplików do zmiennej fileSize
-	dialog --title "Podaj rozmiar pojedynczego pliku" \
+	dialog --title "Pobieranie danych od użytkownika" \
 	--backtitle "Tester ver. 1.0" \
-	--inputbox "Pobieranie danych od użytkownika" 8 60 2>$tmpFile
+	--inputbox "Podaj rozmiar pojedynczego pliku" 8 60 2>$tmpFile
 	fileSize=`cat tmp_File`
-
 	
-	pathAddress="test"
-	
-	/usr/bin/time -p ./CreateFile.sh $fileValue $fileSize $pathAddress 2>$tmpFile
+	/usr/bin/time -p ./CreateFile.sh $fileValue $fileSize 2>$tmpFile
 	workingTimeFinish=`cat tmp_File`
 	echo $workingTimeFinish >> $backup
 
@@ -95,7 +110,7 @@ function Delete
 	--backtitle "Tester ver. 1.0" \
 	--msgbox "Wykonano" 22 55
 	echo $selectOption
-	rm -rf Test
+	sudo rm -rf Test
 	Menu
 }
 
