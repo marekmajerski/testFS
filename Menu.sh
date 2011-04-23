@@ -12,50 +12,143 @@ function SetFile
 {
 	tmpFile=tmp_File
 	location=location_File
-	backup=backup_File
+	backup=backup_Archive
 	user=user_File
 	log=log_File
+	mountDev=mountDev_File
+	mountDir=mountDir_File
+	setFS=setFS_File
+	fsTable=fsTable_File
+	dirTable=dirTable_File
 }
 
 function Menu
 {
 	dialog --title "Okno menu" \
 	--backtitle "Tester ver. 1.0" \
-	--menu "Wybierz opcję" 15 60 4 \
-	1 "Uruchom skrypt testujący" \
-	2 "Przygotuj folder do testow" \
-	3 "Usuwanie Folderu testowego"\
-	4 "Zakończ" 2>$tmpFile
+	--menu "Wybierz opcję" 17 60 8 \
+	1 "Przygotuj folder do testow" \
+	2 "Montowanie partycji" \
+	3 "Uruchom skrypt testujący" \
+	4 "Usuwanie Folderu testowego"\
+	5 "Czyszczenie plikow tymczasowych"\
+	6 "Odmontowywanie partycji"\
+	7 "Zakończ" 2>$tmpFile
 	selectOption=`cat tmp_File`
 
 	case $selectOption in
-	1) Generate ;;
-	2) MakeDir ;;
-	3) Delete ;;
-	3) Finish ;;
+	1) MakeDir ;;
+	2) MountDir ;;
+	3) Generate ;;
+	4) DeleteDir ;;
+	5) DeleteFiles ;;
+	6) UnmountDir ;;
+	7) Finish ;;
 	esac	
 
 	clear	
 }
 
+
+function MountDir
+{
+	diskList=`cat fsTable_File`	
+	dialog --title "Pobieranie danych od uzytkownika" \
+	--backtitle "Tester ver. 1.0" \
+	--inputbox "podaj nazwe urządzenia do zamontowania:
+	$diskList" 15 60 2>$mountDev
+	devLocation=`cat mountDev_File`
+	
+	ls -R /home/$userPath/ | grep ":$" > $dirTable
+	dirList=`cat dirTable_File`
+	dialog --title "Pobieranie danych od uzytkownika" \
+	--backtitle "Tester ver. 1.0" \
+	--inputbox "podaj nazwe folderu do zamontowania: 
+	$dirList" 15 60 2>$mountDir
+	dirLocation=`cat mountDir_File`
+
+	dialog --title "Pobieranie danych od użytkownika" \
+	--backtitle "Tester ver. 1.0" \
+	--inputbox "podaj system plikow w jakim ma byc zamontowana partycja" 8 60 2>$setFS
+	typeFS=`cat setFS_File`
+
+	sudo mount -t $typeFS /$devLocation /$dirLocation
+	
+	dialog --title "Tworzenie folderu" \
+	--backtitle "Tester ver. 1.0" \
+	--msgbox "zamontowano urzadzenia $devLocation do 
+	folderu $dirLocation w systemie plikow $typeFS." 15 35
+	echo $selectOption
+	
+	Menu
+}
+
+function UnmountDir
+{
+	
+	ls -R /home/$userPath/ | grep ":$" > $dirTable
+	dirList=`cat dirTable_File`
+	dialog --title "Pobieranie danych od uzytkownika" \
+	--backtitle "Tester ver. 1.0" \
+	--inputbox "podaj nazwe folderu do odmontowania:
+	dostępne foldery 
+	$dirList" 15 60 2>$mountDir
+	dirLocation=`cat mountDir_File`
+
+	sudo umount /$dirLocation
+	
+	dialog --title "Tworzenie folderu" \
+	--backtitle "Tester ver. 1.0" \
+	--msgbox "odmontowano folder $dirLocation" 15 35
+	echo $selectOption
+	
+	Menu
+}
+
 function MakeDir
 {
-	setFile
+	SetFile
 	#pobieranie ścieżki do montowania
 	dialog --title "Pobieranie danych od uzytkownika" \
 	--backtitle "Tester ver. 1.0" \
-	--inputbox "Podaj sciezke do zapisu testowych plikow:" 8 60 2>$location
+	--inputbox "Podaj nazwe folderu do zapisu testowych plikow:" 9 60 2>$location
 	
-	location=location_File
+	
+	locationPath=`cat location_File`
 	userPath=`cat user_File`
-	mkdir -p /home/$userPath/$location
+	sudo mkdir -p /home/$userPath/$locationPath
 	
+	#dialog --title "Tworzenie folderu" \
+	#--backtitle "Tester ver. 1.0" \
+	#--msgbox "Wykonano" 5 15
+	#echo $selectOption
+	
+	Menu
+	
+}
+
+function DeleteFiles
+{
+		if [ -e tmp_File ]; then
+		rm -f *_File
+		
+		dialog --title "Usuwanie" \
+		--backtitle "Tester ver. 1.0" \
+		--msgbox "Wykonano" 15 20
+		echo $selectOption
+	else
+		error = `cat tmp_File`	
+		dialog --title "Usuwanie" \
+		--backtitle "Tester ver. 1.0" \
+		--msgbox "Wystapil blad $error" 15 20
+		echo $selectOption
+	fi
 	Menu
 }
 
 function Generate
 {
-	setFile
+	SetFile
 
 	#pobieranie do zmiennej fileValue ilosci plików od użytkownika
 	dialog --title "Pobieranie danych od uzytkownika" \
@@ -70,8 +163,9 @@ function Generate
 	--backtitle "Tester ver. 1.0" \
 	--inputbox "Podaj rozmiar pojedynczego pliku" 8 60 2>$tmpFile
 	fileSize=`cat tmp_File`
+	dirLocation=`cat mountDir_File`
 	
-	/usr/bin/time -p ./CreateFile.sh $fileValue $fileSize 2>$tmpFile
+	sudo /usr/bin/time -p ./CreateFile.sh $fileValue $fileSize $dirLocation 2>$tmpFile
 	workingTimeFinish=`cat tmp_File`
 	echo $workingTimeFinish >> $backup
 
@@ -87,30 +181,37 @@ function Generate
 	Menu
 }
 
-
-
-function Help
+function DeleteDir
 {
-	dialog --title "Pomoc" \
+	SetFile
+	userPath=`cat user_File`
+	ls -R /home/$userPath/ | grep ":$" > $dirTable
+	dirList=`cat dirTable_File`
+	
+	dialog --title "Pobieranie danych od uzytkownika" \
 	--backtitle "Tester ver. 1.0" \
-	--msgbox "Program został napisany w jezyku skryptowym BASH. 
-	Aplikacja zapisuje pliki o wielkościach i ilościach podanych przez urzytkownika.
-	Aby aplikacja działała poprawnie niezbędne jest doinstalowanie biblioteki dialog,
-	która zajmuje się wyświetlaniem interfejsu okienkowego.
-	TO DO:
-	aplikacja w wersji 2.0 będzie miała możliwość tworzenia partcji, 
-	które będą zapisywane automatycznie do listy testującej. " 22 55
-	echo $selectOption
-	Menu
-}
-
-function Delete
-{
-	dialog --title "Usuwanie" \
-	--backtitle "Tester ver. 1.0" \
-	--msgbox "Wykonano" 22 55
-	echo $selectOption
-	sudo rm -rf Test
+	--inputbox "Podaj nazwe folderu do usuniecia 
+	$dirList" 17 60 2>$location
+	
+	locationPath=`cat location_File`
+	userPath=`cat user_File`
+	
+	if [ -s /location_File ]; then
+		
+		sudo rm -rf /home/$userPath/$locationPath/
+		
+		dialog --title "Usuwanie" \
+		--backtitle "Tester ver. 1.0" \
+		--msgbox "Wykonano" 15 20
+		echo $selectOption
+	else
+		error=`cat tmp_File`
+		dialog --title "Usuwanie" \
+		--backtitle "Tester ver. 1.0" \
+		--msgbox "Wystapil blad 
+		$error" 15 20
+		echo $selectOption
+	fi
 	Menu
 }
 
@@ -135,8 +236,14 @@ function Finish
 
 }
 
+
 SetFile
+	whoami > $user
+	userPath=`cat user_File`
+	ls -R /home/$userPath/ | grep ":$" > $dirTable
+	sudo fdisk -l | grep /dev > $fsTable	
 Menu
+
 
 
 

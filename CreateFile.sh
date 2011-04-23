@@ -14,8 +14,6 @@
 
 for (( i=0; $i < $1; ++i )) 
 do
-	#TODO zapisywanie do lokalizacj okreslonej przez usera
-	#do określonego dysku,folderu zmienna $3 wejdzie zamiast folderu test	
 	dd if=/dev/urandom of=$3/f$i bs=$2 count=1 2>/dev/null
 done
 exit 0
